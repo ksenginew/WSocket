@@ -2,7 +2,16 @@
 **HTTP and Websocket both supported wsgi server**
 
 WSGI Server creates and listens at the HTTP
-socket, dispatching the requests to a handler. 
+socket, dispatching the requests to a handler.
+
+### Installation
+easily install using pip
+```bash
+pip install wsocket
+```
+or,
+just download and add [wsocket.py](https://github.com/Ksengine/WSocket/blob/master/wsocket.py) file to your project folder.
+### Example
 Code to create and run the server looks like this:\
 using bottle
 ```python
@@ -40,7 +49,7 @@ except:
     print('WSGIServer: Server Stopped')
 ```
 run this code
-download client.html file
+download [client.html](https://github.com/Ksengine/WSocket/blob/master/client.html) file
 open it with browser
 see how it works!
 then navigate to http://localhost:9001
