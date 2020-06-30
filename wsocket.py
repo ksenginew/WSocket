@@ -10,7 +10,7 @@ socket, dispatching the requests to a handler.
 """
 
 from __future__ import print_function
-from sl import WSGIHandler
+from sl.server import WSGIRequestHandler
 import sys
 import struct
 from base64 import b64encode
@@ -38,7 +38,7 @@ OPCODE_PING = 0x9
 OPCODE_PONG = 0xA
 
 
-class WebSocketHandler(WSGIHandler):
+class WebSocketHandler(WSGIRequestHandler):
 
     """Simple HTTP and WebSocket Handler.
 
@@ -46,39 +46,36 @@ class WebSocketHandler(WSGIHandler):
     handle HTTP requests with wsgi framework as normal server.
 
     """
-
+    ws=False
     SUPPORTED_VERSIONS = ('13', '8', '7')
-
-    def do_GET(self):
+    def get_environ(self):
+        env = WSGIRequestHandler.get_environ(self)
+        if self.ws:
+            env['wsgi.websocket_version'] = \
+                env.get('HTTP_SEC_WEBSOCKET_VERSION')
+            env['wsgi.websocket'] = self
+        return env
+        
+    def upgrade(self):
         self.env = self.get_environ()
-        if 'HTTP_CONNECTION' in self.env:
-            if self.env['HTTP_CONNECTION'] == 'Upgrade':
-                logger.info('Connection Upgrade Requested.')
-                if 'HTTP_UPGRADE' in self.env:
-                    if self.env['HTTP_UPGRADE'].lower() == 'websocket':
-                        logger.info('Upgrade to Websocket Requested.')
-                        if self.env.get('HTTP_SEC_WEBSOCKET_VERSION'):
-                            logger.info('Handshaking...')
-                            self.handshake()
-                            self.send(str(self.server.application(self.env,
-                                    self.fake)))
-                        else:
-                            logger.info('Secure WebSocket Version Not Found ?'
-                                    )
-                            self.send_response(426, 'Upgrade Required')
-                            self.send_header('Sec-WebSocket-Version',
-                                    ', '.join(self.SUPPORTED_VERSIONS))
-                            self.end_headers()
-            else:
-                logger.info("Client didn't ask for a connection upgrade"
+        if 'HTTP_CONNECTION' in self.env and self.env['HTTP_CONNECTION'] == 'Upgrade':
+            logger.info('Connection Upgrade Requested.')
+            if 'HTTP_UPGRADE' in self.env and self.env['HTTP_UPGRADE'].lower() == 'websocket':
+                logger.info('Upgrade to Websocket Requested.')
+                if self.env.get('HTTP_SEC_WEBSOCKET_VERSION'):
+                    logger.info('Handshaking...')
+                    self.ws=True
+                    self.handshake()
+                else:
+                    logger.info('Secure WebSocket Version Not Found ?'
                             )
+                    self.send_response(426, 'Upgrade Required')
+                    self.send_header('Sec-WebSocket-Version',
+                            ', '.join(self.SUPPORTED_VERSIONS))
+                    self.end_headers()
+        else:
+            logger.info("Client didn't ask for a connection upgrade")
 
-                # It's time to call our application callable and get
-                # back a result that will become HTTP response body
-
-                result = self.server.application(self.env,
-                        self.start_response)
-                self.finish_response(result)
 
     def handshake(self):
         if self.env.get('HTTP_SEC_WEBSOCKET_VERSION') \
@@ -94,7 +91,6 @@ class WebSocketHandler(WSGIHandler):
         self.env['wsgi.websocket'] = self
         try:
             key = self.env['HTTP_SEC_WEBSOCKET_KEY']
-            print(key)
         except KeyError:
             logger.info('Secure WebSocket Key Not Found ?')
             self.send_response(404, 'Bad Request')
@@ -106,6 +102,7 @@ class WebSocketHandler(WSGIHandler):
         self.send_header('Sec-WebSocket-Accept',
                          self.calculate_response_key(key))
         self.end_headers()
+        self.keep_alive=True
 
     @classmethod
     def calculate_response_key(cls, key):
@@ -115,11 +112,14 @@ class WebSocketHandler(WSGIHandler):
         return response_key.decode('ASCII')
 
     def receive(self):
+        if not self.keep_alive:
+            return
         try:
             (b1, b2) = self.read_bytes(0x2)
         except SocketError as e:
             if e.errno == errno.ECONNRESET:
                 logger.info('Client closed connection.')
+                self.keep_alive = 0
                 return
             (b1, b2) = (0x0, 0x0)
         except ValueError as e:
@@ -132,9 +132,11 @@ class WebSocketHandler(WSGIHandler):
 
         if opcode == OPCODE_CLOSE_CONN:
             logger.info('Client asked to close connection.')
+            self.keep_alive = 0
             return
         if not masked:
             logger.warn('Client must always be masked.')
+            self.keep_alive = 0
             return
         if opcode == OPCODE_CONTINUATION:
             logger.warn('Continuation frames are not supported.')
@@ -150,6 +152,7 @@ class WebSocketHandler(WSGIHandler):
             opcode_handler = self._pong_received_
         else:
             logger.warn('Unknown opcode %#x.' % opcode)
+            self.keep_alive = 0
             return
 
         if payload_length == 0x7e:
@@ -243,6 +246,13 @@ class WebSocketHandler(WSGIHandler):
             return
 
         self.wfile.write(header + payload)
+
+    def do_GET(self):
+        self.upgrade()
+        WSGIRequestHandler.do_GET(self)
+
+    def do_POST(self):
+        WSGIRequestHandler.do_POST(self)
 
 
 def encode_to_UTF8(data):

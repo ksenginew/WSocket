@@ -23,7 +23,7 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='WSocket',
-    version='1.0.0',
+    version='1.0.4',
     author='Kavindu Santhusa',
     author_email='kavindusanthusa@gmail.com',
     license='MIT',
@@ -57,5 +57,5 @@ setup(
         'Programming Language :: Python :: 3',
         ],
     include_package_data=True,
-    install_requires=['ServerLight']
+    install_requires=['ServeLight']
     )
