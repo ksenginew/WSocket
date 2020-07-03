@@ -45,10 +45,14 @@ class WebSocketHandler(WSGIRequestHandler):
     This can communicate through websocket using wsgi framework. And 
     handle HTTP requests with wsgi framework as normal server.
 
+    Automatically upgrades the connection to a websocket.
     """
     ws=False
     SUPPORTED_VERSIONS = ('13', '8', '7')
     def get_environ(self):
+        """
+        Add websocket to WSGI environment.
+        """
         env = WSGIRequestHandler.get_environ(self)
         if self.ws:
             env['wsgi.websocket_version'] = \
@@ -57,7 +61,12 @@ class WebSocketHandler(WSGIRequestHandler):
         return env
         
     def upgrade(self):
+        """
+        Attempt to upgrade the current environ into a websocket enabled
+        connection.
+        """
         self.env = self.get_environ()
+        self.logger.debug("Validating WebSocket request")
         if 'HTTP_CONNECTION' in self.env and self.env['HTTP_CONNECTION'] == 'Upgrade':
             logger.info('Connection Upgrade Requested.')
             if 'HTTP_UPGRADE' in self.env and self.env['HTTP_UPGRADE'].lower() == 'websocket':
