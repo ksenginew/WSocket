@@ -1,6 +1,8 @@
 # WSocket
 **HTTP and Websocket both supported wsgi server**
 
+[![Downloads](https://pepy.tech/badge/wsocket)](https://pepy.tech/project/wsocket)
+
 WSGI Server creates and listens at the HTTP
 socket, dispatching the requests to a handler.
 
