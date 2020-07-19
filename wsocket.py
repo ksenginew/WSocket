@@ -2,15 +2,20 @@
 # -*- coding: utf-8 -*-
 
 """# WSocket
-**HTTP and Websocket both supported wsgi server**
+**HTTP and Websocket both supported server(WSGI)**
 
-WSGI Server creates and listens at the HTTP
-socket, dispatching the requests to a handler.
- this is a plugin to ServerLight Framework.
+Server(WSGI) creates and listens at the HTTP
+socket, dispatching the requests to a handler. 
+this is only use standard python libraries. 
+also: 
+this is a plugin to ServerLight Framework.
 """
 
 from __future__ import print_function
-from sl.server import WSGIRequestHandler
+try:
+    from sl.server import WSGIRequestHandler, ServerHandler as shandler
+except ImportError:
+    from wsgiref.simple_server import WSGIRequestHandler, ServerHandler as shandler
 import sys
 import struct
 from base64 import b64encode
@@ -22,6 +27,16 @@ logger = logging.getLogger(__name__)
 logging.basicConfig()
 __all__ = ['WebSocketHandler']
 __version__ = '1.0.0'
+
+class ServerHandler(shandler):
+
+    server_software = shandler.server_software
+
+    def close(self):
+        try:
+            shandler.close(self)
+        except:
+            pass
 
 FIN = 0x80
 OPCODE = 0x0f
@@ -66,7 +81,7 @@ class WebSocketHandler(WSGIRequestHandler):
         connection.
         """
         self.env = self.get_environ()
-        self.logger.debug("Validating WebSocket request")
+        logger.debug("Validating WebSocket request")
         if 'HTTP_CONNECTION' in self.env and self.env['HTTP_CONNECTION'] == 'Upgrade':
             logger.info('Connection Upgrade Requested.')
             if 'HTTP_UPGRADE' in self.env and self.env['HTTP_UPGRADE'].lower() == 'websocket':
@@ -75,6 +90,7 @@ class WebSocketHandler(WSGIRequestHandler):
                     logger.info('Handshaking...')
                     self.ws=True
                     self.handshake()
+                    return True
                 else:
                     logger.info('Secure WebSocket Version Not Found ?'
                             )
@@ -82,6 +98,7 @@ class WebSocketHandler(WSGIRequestHandler):
                     self.send_header('Sec-WebSocket-Version',
                             ', '.join(self.SUPPORTED_VERSIONS))
                     self.end_headers()
+                    return True
         else:
             logger.info("Client didn't ask for a connection upgrade")
 
@@ -257,12 +274,25 @@ class WebSocketHandler(WSGIRequestHandler):
         self.wfile.write(header + payload)
 
     def do_GET(self):
-        self.upgrade()
-        WSGIRequestHandler.do_GET(self)
+        if self.upgrade():
+            handler = ServerHandler(
+                self.rfile, self.wfile, self.get_stderr(), self.get_environ(),
+                multithread=False,
+            )
+            self.s = handler
+            handler.finish_response = self.finish_response
+            handler.request_handler = self      # backpointer for logging
+            handler.run(self.server.get_app())
+        else:
+            WSGIRequestHandler.do_GET(self)
 
     def do_POST(self):
         WSGIRequestHandler.do_POST(self)
 
+    def finish_response(self):
+        if hasattr(self.s.result, 'close'):
+            self.s.result.close()
+        self.s.close()
 
 def encode_to_UTF8(data):
     try:

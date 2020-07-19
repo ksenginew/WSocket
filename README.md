@@ -3,25 +3,22 @@
 
 [![Downloads](https://pepy.tech/badge/wsocket)](https://pepy.tech/project/wsocket)
 
-WSGI Server creates and listens at the HTTP
-socket, dispatching the requests to a handler.
+Server(WSGI) creates and listens at the HTTP
+socket, dispatching the requests to a handler. 
+this is only use standard python libraries. 
+also: 
+this is a plugin to ServerLight Framework.
 
-### Installation
-easily install using pip
-```bash
-pip install wsocket
-```
-or,
-just download and add [wsocket.py](https://github.com/Ksengine/WSocket/blob/master/wsocket.py) file to your project folder.
-### Example
-Code to create and run the server looks like this:\
-using bottle
+**for a better experiense install [servelight](https://www.github.com/Ksengine/ServeLight)**
+
+###Code to create and run the server looks like this:\
+using bottle(install bottle before try)
 ```python
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from bottle import request, Bottle
-from wsgi import WebSocketHandler
-from sl import *
+from wsocket import WebSocketHandler
+from wsgiref.simple_server import make_server
 from time import sleep
 
 app = Bottle()
@@ -38,20 +35,16 @@ def handle_websocket():
         sleep(3)
         wsock.send('Your message was: %r' % message)
 
-def make_server(application):
-    server = ThreadingWSGIServer(('', 9001), WebSocketHandler)
-    server.set_app(application)
-    return server
-
-httpd = make_server(app)
+httpd = make_server('localhost',9001,app,handler_class=WebSocketHandler)
 print('WSGIServer: Serving HTTP on port 9001 ...\n')
 try:
     httpd.serve_forever()
 except:
     print('WSGIServer: Server Stopped')
+
 ```
 run this code
-download [client.html](https://github.com/Ksengine/WSocket/blob/master/client.html) file
+download client.html file
 open it with browser
 see how it works!
 then navigate to http://localhost:9001
