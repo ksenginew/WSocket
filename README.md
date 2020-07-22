@@ -61,5 +61,6 @@ You can see
 > Flask, Django, Pyramid, Bottle supported
 
 [**View Documentaion***](https://servelight2020.gitbook.io/docs/)
+[report bugs](https://github.com/Ksengine/WSocket/issues/new/choose)
 ### License
 Code and documentation are available according to the MIT License (see  [LICENSE](https://github.com/Ksengine/WSocket/blob/master/LICENSE)).
