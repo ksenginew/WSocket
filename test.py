@@ -1,8 +1,8 @@
 from bottle import request, Bottle
-from wsocket import WebSocketHandler
-from wsgiref.simple_server import make_server
+from wsocket import WebSocketHandler,logger
+from sl.server import ThreadingWSGIServer
 from time import sleep
-
+#logger.setLevel(10)
 app = Bottle()
 
 @app.route('/')
@@ -17,7 +17,8 @@ def handle_websocket():
         sleep(3)
         wsock.send('Your message was: %r' % message)
 
-httpd = make_server('localhost',9001,app,handler_class=WebSocketHandler)
+httpd = ThreadingWSGIServer(('localhost',9001),WebSocketHandler)
+httpd.set_app(app)
 print('WSGIServer: Serving HTTP on port 9001 ...\n')
 try:
     httpd.serve_forever()
