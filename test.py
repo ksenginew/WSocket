@@ -2,7 +2,7 @@ from bottle import request, Bottle
 from wsocket import WebSocketHandler,logger
 from sl.server import ThreadingWSGIServer
 from time import sleep
-#logger.setLevel(10)
+logger.setLevel(10)
 app = Bottle()
 
 @app.route('/')
@@ -12,6 +12,8 @@ def handle_websocket():
         return 'Hello World!'
     while True:
         message = wsock.receive()
+        if not message:
+            break
         print(message)
         wsock.send('Your message was: %r' % message)
         sleep(3)

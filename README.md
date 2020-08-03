@@ -1,6 +1,9 @@
 # WSocket
 **HTTP and Websocket both supported wsgi server**
 
+**Note:**
+I am a student.I have no enough knowladge. So can anyone [help me](https://github.com/Ksengine/WSocket/issues/2) to develop this?
+
 [![Downloads](https://pepy.tech/badge/wsocket)](https://pepy.tech/project/wsocket)
 
 Server(WSGI) creates and listens at the HTTP
@@ -13,11 +16,12 @@ this is a plugin to ServerLight Framework.
 
 ###Code to create and run the server looks like this:\
 using bottle(install bottle before try)
+ref: [bottlepy](https://bottlepy.org/docs/0.12/async.html?highlight=websocket#finally-websockets)
 ```python
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from bottle import request, Bottle
-from wsocket import WebSocketHandler
+from wsocket import WebSocketHandler, WebSocketError
 from wsgiref.simple_server import make_server
 from time import sleep
 
@@ -28,12 +32,17 @@ def handle_websocket():
     wsock = request.environ.get('wsgi.websocket')
     if not wsock:
         return 'Hello World!'
+
     while True:
-        message = wsock.receive()
-        print(message)
-        wsock.send('Your message was: %r' % message)
-        sleep(3)
-        wsock.send('Your message was: %r' % message)
+        try:
+            message = wsock.receive()
+            print(message)
+            wsock.send('Your message was: %r' % message)
+            sleep(3)
+            wsock.send('Your message was: %r' % message)
+        except WebSocketError:
+            break        
+
 
 httpd = make_server('localhost',9001,app,handler_class=WebSocketHandler)
 print('WSGIServer: Serving HTTP on port 9001 ...\n')
@@ -44,7 +53,7 @@ except:
 
 ```
 run this code
-download client.html file
+download [client.html](https://github.com/Ksengine/WSocket/blob/master/client.html) file
 open it with browser
 see how it works!
 then navigate to http://localhost:9001
@@ -60,9 +69,7 @@ You can see
  
 > Flask, Django, Pyramid, Bottle supported
 
-[**View Documentaion***](https://servelight2020.gitbook.io/wsocket/)
-
+[**View Documentaion***](https://servelight2020.gitbook.io/docs/)
 [report bugs](https://github.com/Ksengine/WSocket/issues/new/choose)
-
 ### License
 Code and documentation are available according to the MIT License (see  [LICENSE](https://github.com/Ksengine/WSocket/blob/master/LICENSE)).
