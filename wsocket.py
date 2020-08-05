@@ -276,7 +276,7 @@ class WebSocketHandler(WSGIRequestHandler):
         return msg
 
     def send_pong(self, msg):
-        self.send(message, OPCODE_PONG)
+        self.send(msg, OPCODE_PONG)
         return
 
     def fake(self, *args, **kwargs):
