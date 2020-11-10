@@ -1,1 +1,6 @@
-include LICENSE.txt README.md
+include wsocket.py
+include setup.py
+include README.rst
+include LICENSE
+include test/views/*.tpl
+include test/*.py

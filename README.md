@@ -1,75 +1,64 @@
-# WSocket
-**HTTP and Websocket both supported wsgi server**
-
-**Note:**
-I am a student.I have no enough knowladge. So can anyone [help me](https://github.com/Ksengine/WSocket/issues/2) to develop this?
+# ![WSocket](https://github.com/Ksengine/WSocket/raw/master/assests/icon.png =30x30) WSocket
+**Simple WSGI Websocket Server, Framework, Middleware And App.**
 
 [![Downloads](https://pepy.tech/badge/wsocket)](https://pepy.tech/project/wsocket)
 
-Server(WSGI) creates and listens at the HTTP
-socket, dispatching the requests to a handler. 
-this is only use standard python libraries. 
-also: 
-this is a plugin to ServerLight Framework.
+**Note:**
+I am a 16 years old student.I have no enough knowledge. So can anyone [help me](https://github.com/Ksengine/WSocket/issues/2) to develop this library?
+## Server
+Server([WSGI](http://www.wsgi.org/)) creates and listens at the HTTPsocket, dispatching the requests to a handler. WSGIRef server but uses threads to handle requests by using the ThreadingMixIn. This is useful to handle web browsers pre-opening sockets, on which Server would wait indefinitely.
+**can used with any WSGI compatible web framework**
 
-**for a better experiense install [servelight](https://www.github.com/Ksengine/ServeLight)**
+## Middleware
+convert any WSGI compatible web framework to Websocket+HTTP framework
+using middleware.
+**works with many WSGI compatible servers**
+**can used with any WSGI compatible web framework**
+> Flask, Django, Pyramid, Bottle, ... supported
 
-###Code to create and run the server looks like this:\
-using bottle(install bottle before try)
-ref: [bottlepy](https://bottlepy.org/docs/0.12/async.html?highlight=websocket#finally-websockets)
-```python
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-from bottle import request, Bottle
-from wsocket import WebSocketHandler, WebSocketError
-from wsgiref.simple_server import make_server
-from time import sleep
+## Handler
+`wsgiref.simple_server.WSGIRequestHandler`  like class named `FixedHandler`  that always wrap WSGI app using Middleware.
+changes from `WSGIRequestHandler` :
+- Prevents reverse DNS lookups
+- errorless logger
+- use `ServerHandler`  to make it WSGI
 
-app = Bottle()
+> You can convert wsgiref to a websocket+HTTP server using this handler
 
-@app.route('/')
-def handle_websocket():
-    wsock = request.environ.get('wsgi.websocket')
-    if not wsock:
-        return 'Hello World!'
+### ServerHandler
+`wsgiref.simple_server.ServerHandler`(inherited from `wsgiref.handlers.ServerHandler` like handler named `FixedServerHandler` .
+changes from `ServerHandler` :
+- set HTTP version to `1.1` because versions below `1.1` are not supported some clients like Firefox.
+- removed hop-by-hop headers checker because it raise errors on `Upgrade`  and `Connection` headers
+- check that all headers are strings
 
-    while True:
-        try:
-            message = wsock.receive()
-            print(message)
-            wsock.send('Your message was: %r' % message)
-            sleep(3)
-            wsock.send('Your message was: %r' % message)
-        except WebSocketError:
-            break        
+## Framework
+basic WSGI web application framework that uses Middleware.
+- simple routes handler
+- auto description to status code
+- headers checker
+- send data as soon as possible
+- send strings, bytes, lists(even bytes and strings mixed) or files directly 
+- error catcher and error logger
 
+**works with many WSGI compatible servers**
 
-httpd = make_server('localhost',9001,app,handler_class=WebSocketHandler)
-print('WSGIServer: Serving HTTP on port 9001 ...\n')
-try:
-    httpd.serve_forever()
-except:
-    print('WSGIServer: Server Stopped')
+## App
+Event based app for websocket communication. this is app that uses Framework
+if not events handled by developer. this app works like demo(echo) app.
 
-```
-run this code
-download [client.html](https://github.com/Ksengine/WSocket/blob/master/client.html) file
-open it with browser
-see how it works!
-then navigate to http://localhost:9001
-You can see
-    Hello World!
-### Features
- - the power of websocket
- - fast ( It's very fast )
- - simple
- - lightweight (simple and lightweight )
- -  [WSGI](http://www.wsgi.org/) ( supports web server gateway interface )
- - with web frameworks (any  [WSGI](http://www.wsgi.org/)  framework supported)
- 
-> Flask, Django, Pyramid, Bottle supported
+## Features
+all Middleware, Handler, Framework and App has following features.
+- websocket sub protocol supported
+- websocket message compression supported (works if client asks)
+- receive and send pong and ping messages(with automatic pong sender)
+- receive and send binary or text messages
+- works for messages with or without mask
+- closing messages supported
+- auto and manual close
 
-[**View Documentaion***](https://servelight2020.gitbook.io/docs/)
-[report bugs](https://github.com/Ksengine/WSocket/issues/new/choose)
+**View Documentaion** - https://wsocket.gitbook.io/
+**Report Bugs** - https://github.com/Ksengine/WSocket/issues/new/
+
 ### License
 Code and documentation are available according to the MIT License (see  [LICENSE](https://github.com/Ksengine/WSocket/blob/master/LICENSE)).
