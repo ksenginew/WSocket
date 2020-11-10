@@ -1,0 +1,9 @@
+# Add 'repo' label to any root file changes
+repo:
+  - ./*
+
+docs:
+  - ./docs/*
+  
+source:
+  - ./*.py
