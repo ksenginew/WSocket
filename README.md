@@ -1,5 +1,5 @@
 # <img src="https://github.com/Ksengine/WSocket/raw/master/assests/icon.png" width="30" height="30"> WSocket
-**Simple WSGI Websocket Server, Framework, Middleware And App.**
+**Simple WSGI HTTP + Websocket Server, Framework, Middleware And App.**
 
 [![Downloads](https://pepy.tech/badge/wsocket)](https://pepy.tech/project/wsocket)
 
