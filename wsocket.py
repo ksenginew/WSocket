@@ -36,11 +36,11 @@ try:  # Py3
 except ImportError:  # Py2
     from SocketServer import ThreadingMixIn
     from urllib import urlencode
-    
+
 __author__ = "Kavindu Santhusa"
-__version__ = "2.0.0.dev1"
+__version__ = "2.0.1"
 __license__ = "MIT"
-__status__ = 4 # see setup.py
+__status__ = 4  # see setup.py
 
 logger = logging.getLogger(__name__)
 logging.basicConfig()
@@ -51,7 +51,7 @@ if PY3:
     import http.client as httplib
 
     text_type = str
-    string_types = (str,)
+    string_types = (str, )
     range_type = range
 
 else:
@@ -92,7 +92,9 @@ HTTP_CODES[429] = "Too Many Requests"
 HTTP_CODES[431] = "Request Header Fields Too Large"
 HTTP_CODES[451] = "Unavailable For Legal Reasons"  # RFC 7725
 HTTP_CODES[511] = "Network Authentication Required"
-_HTTP_STATUS_LINES = dict((k, "%d %s" % (k, v)) for (k, v) in HTTP_CODES.items())
+_HTTP_STATUS_LINES = dict(
+    (k, "%d %s" % (k, v)) for (k, v) in HTTP_CODES.items())
+
 
 def log_traceback(ex):
     if PY3:
@@ -101,7 +103,7 @@ def log_traceback(ex):
         _, _, ex_traceback = exc_info()
     tb_lines = ''
     for line in traceback.format_exception(ex.__class__, ex, ex_traceback):
-        tb_lines+=str(line)
+        tb_lines += str(line)
     return tb_lines
 
 
@@ -130,7 +132,6 @@ class FrameTooLargeException(ProtocolError):
 
 
 class ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
-
     """This class is identical to WSGIServer but uses threads to handle
     requests by using the ThreadingMixIn. This is useful to handle web
     browsers pre-opening sockets, on which Server would wait indefinitely.
@@ -143,14 +144,14 @@ class ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
 class FixedServerHandler(ServerHandler):  # fixed serverhandler
     http_version = "1.1"  # http versions below 1.1 is not supported by some clients such as Firefox
 
-    def _convert_string_type(self, value, title):  # not in old versions of wsgiref
+    def _convert_string_type(self, value,
+                             title):  # not in old versions of wsgiref
         """Convert/check value type."""
         if isinstance(value, string_types):
             return value
 
-        raise AssertionError(
-            "{0} must be of type str (got {1})".format(title, repr(value))
-        )
+        raise AssertionError("{0} must be of type str (got {1})".format(
+            title, repr(value)))
 
     def start_response(self, status, headers, exc_info=None):
         """'start_response()' callable as specified by PEP 3333"""
@@ -201,7 +202,8 @@ class FixedHandler(WSGIRequestHandler):  # fixed request handler
     def get_app(self):
         return self.server.get_app()
 
-    def handle(self):  # to add FixedServerHandler we had to override entire method
+    def handle(self
+               ):  # to add FixedServerHandler we had to override entire method
         """Handle a single HTTP request"""
 
         self.raw_requestline = self.rfile.readline(65537)
@@ -215,9 +217,8 @@ class FixedHandler(WSGIRequestHandler):  # fixed request handler
         if not self.parse_request():  # An error code has been sent, just exit
             return
 
-        handler = FixedServerHandler(
-            self.rfile, self.wfile, self.get_stderr(), self.get_environ()
-        )
+        handler = FixedServerHandler(self.rfile, self.wfile, self.get_stderr(),
+                                     self.get_environ())
         handler.request_handler = self  # backpointer for logging
         handler.run(self.get_app())
 
@@ -245,7 +246,8 @@ class WebSocket(object):
         self.version = self.environ.get("HTTP_SEC_WEBSOCKET_VERSION")
         self.path = self.environ.get("PATH_INFO")
         if do_compress:
-            self.compressor = zlib.compressobj(7, zlib.DEFLATED, -zlib.MAX_WBITS)
+            self.compressor = zlib.compressobj(7, zlib.DEFLATED,
+                                               -zlib.MAX_WBITS)
             self.decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
 
     def __del__(self):
@@ -274,14 +276,10 @@ class WebSocket(object):
 
     def _is_valid_close_code(self, code):
         # valid hybi close code?
-        if (
-            code < 1000
-            or 1004 <= code <= 1006
-            or 1012 <= code <= 1016
-            or code
-            == 1100  # not sure about this one but the autobahn fuzzer requires it.
-            or 2000 <= code <= 2999
-        ):
+        if (code < 1000 or 1004 <= code <= 1006 or 1012 <= code <= 1016
+                or code ==
+                1100  # not sure about this one but the autobahn fuzzer requires it.
+                or 2000 <= code <= 2999):
             return False
 
         return True
@@ -340,33 +338,35 @@ class WebSocket(object):
             if f_opcode > 0x07:
                 if not fin:
                     raise ProtocolError(
-                        "Received fragmented control frame: {0!r}".format(data)
-                    )
+                        "Received fragmented control frame: {0!r}".format(
+                            data))
                 # Control frames MUST have a payload length of 125 bytes or less
                 if length > 125:
                     raise FrameTooLargeException(
                         "Control frame cannot be larger than 125 bytes: "
-                        "{0!r}".format(data)
-                    )
+                        "{0!r}".format(data))
 
             if length == 126:
                 # 16 bit length
                 data = self.read(2)
                 if len(data) != 2:
-                    raise WebSocketError("Unexpected EOF while decoding header")
+                    raise WebSocketError(
+                        "Unexpected EOF while decoding header")
                 length = struct.unpack("!H", data)[0]
 
             elif length == 127:
                 # 64 bit length
                 data = self.read(8)
                 if len(data) != 8:
-                    raise WebSocketError("Unexpected EOF while decoding header")
+                    raise WebSocketError(
+                        "Unexpected EOF while decoding header")
                 length = struct.unpack("!Q", data)[0]
 
             if has_mask:
                 mask = self.read(4)
                 if len(mask) != 4:
-                    raise WebSocketError("Unexpected EOF while decoding header")
+                    raise WebSocketError(
+                        "Unexpected EOF while decoding header")
 
             if self.do_compress and (flags & RSV0_MASK):
                 flags &= ~RSV0_MASK
@@ -392,28 +392,25 @@ class WebSocket(object):
                     raise WebSocketError("Could not read payload")
 
                 if len(payload) != length:
-                    raise WebSocketError("Unexpected EOF reading frame payload")
+                    raise WebSocketError(
+                        "Unexpected EOF reading frame payload")
 
                 if mask:
                     payload = self.mask_payload(mask, length, payload)
 
                 if compressed:
-                    payload = b"".join(
-                        (
-                            self.decompressor.decompress(bytes(payload)),
-                            self.decompressor.decompress(b"\0\0\xff\xff"),
-                            self.decompressor.flush(),
-                        )
-                    )
+                    payload = b"".join((
+                        self.decompressor.decompress(bytes(payload)),
+                        self.decompressor.decompress(b"\0\0\xff\xff"),
+                        self.decompressor.flush(),
+                    ))
 
             if f_opcode in (OPCODE_TEXT, OPCODE_BINARY):
                 # a new frame
                 if opcode:
-                    raise ProtocolError(
-                        "The opcode in non-fin frame is "
-                        "expected to be zero, got "
-                        "{0!r}".format(f_opcode)
-                    )
+                    raise ProtocolError("The opcode in non-fin frame is "
+                                        "expected to be zero, got "
+                                        "{0!r}".format(f_opcode))
 
                 opcode = f_opcode
 
@@ -584,12 +581,12 @@ class WebSocket(object):
 
         try:
             message = self._encode_bytes(message)
-            self.send_frame(
-                struct.pack("!H%ds" % len(message), code, message), opcode=OPCODE_CLOSE
-            )
+            self.send_frame(struct.pack("!H%ds" % len(message), code, message),
+                            opcode=OPCODE_CLOSE)
 
         except WebSocketError:
-            self.logger.debug("Failed to write closing frame -> closing socket")
+            self.logger.debug(
+                "Failed to write closing frame -> closing socket")
 
         finally:
             self.logger.debug("Closed WebSocket")
@@ -600,24 +597,22 @@ class WebSocket(object):
 
 
 class Response(object):
-    default_content_type = "text/html; charset=UTF-8"
-
     # Header blacklist for specific response codes
     # (rfc2616 section 10.2.3 and 10.3.5)
     bad_headers = {
-        204: frozenset(("Content-Type", "Content-Length")),
-        304: frozenset(
-            (
-                "Allow",
-                "Content-Encoding",
-                "Content-Language",
-                "Content-Length",
-                "Content-Range",
-                "Content-Type",
-                "Content-Md5",
-                "Last-Modified",
-            )
-        ),
+        204:
+        frozenset(("Content-Type", "Content-Length")),
+        304:
+        frozenset((
+            "Allow",
+            "Content-Encoding",
+            "Content-Language",
+            "Content-Length",
+            "Content-Range",
+            "Content-Type",
+            "Content-Md5",
+            "Last-Modified",
+        )),
     }
     headers_sent = False
 
@@ -634,11 +629,11 @@ class Response(object):
             self.start_response()
             log = log_traceback(e)
             err = "<h1>Internal Server Error(500)</h1><p><b>%s :%s</b></p><p><samp><pre>%s</pre></samp></p><a href=\"https://github.com/Ksengine/wsocket/issues/new?%s\" target=\"blank\"><button><h3>report</h3></button></a>" % (
-                type(e).__name__,
-                str(e),
-                log,
-                urlencode({'title':type(e).__name__,'body':'```python\n'+log+'\n```'})
-            )
+                type(e).__name__, str(e), log,
+                urlencode({
+                    'title': type(e).__name__,
+                    'body': '```python\n' + log + '\n```'
+                }))
             return [err.encode("utf-8")]
 
         if not allow_write:
@@ -651,7 +646,7 @@ class Response(object):
             return [results]
 
         elif hasattr(results, "__iter__"):
-            while not headers_sent:
+            while not self.headers_sent:
                 pass
 
             for result in results:
@@ -681,9 +676,6 @@ class Response(object):
         if self.code in self.bad_headers:
             bad_headers = self.bad_headers[self.code]
             headers = [h for h in headers if h[0] not in bad_headers]
-
-        if "Content-Type" not in headers:
-            headers.append(("Content-Type", self.default_content_type))
 
         self.write = self._start_response(status, headers)
         self.headers_sent = True
@@ -768,9 +760,14 @@ class WSocketApp:
         self.app = app or self.wsgi
         self.onclose = Event(self.on_close)
         self.onmessage = Event(self.on_message)
+        self.onconnect = Event(self.on_connect)
 
     def on_close(self, message):
         print(message)
+
+    def on_connect(self, client):
+        print(client)
+        client.send('you connected')
 
     def fake(*args, **kwargs):
         pass
@@ -795,8 +792,7 @@ class WSocketApp:
     def not_found(self, environ, start_response):
         start_response(404)
         return "<h1>Page Not Found(404)</h1><p><b>%s</b></p>" % (
-            environ.get("PATH_INFO") + "?" + environ.get("QUERY_STRING", "\b")
-        )
+            environ.get("PATH_INFO") + "?" + environ.get("QUERY_STRING", "\b"))
 
     def wsgi(self, environ, start_response):
         if len(self.routes):
@@ -805,9 +801,8 @@ class WSocketApp:
                     r = Response(environ, start_response, self.routes[route])
                     return r.process_response()
 
-                if route.endswith("*") and environ.get("PATH_INFO", "").startswith(
-                    route[:-1]
-                ):
+                if route.endswith("*") and environ.get(
+                        "PATH_INFO", "").startswith(route[:-1]):
                     r = Response(environ, start_response, self.routes[route])
                     return r.process_response()
 
@@ -818,10 +813,12 @@ class WSocketApp:
         if not wsock:
             start_response()
             return "<h1>Hello World!</h1>"
+
+        self.onconnect(wsock)
         while True:
             try:
                 message = wsock.receive()
-                if message:
+                if message != None:
                     self.onmessage(message, wsock)
 
             except WebSocketError as e:
@@ -830,14 +827,13 @@ class WSocketApp:
         return []
 
     def __call__(self, environ, start_response):
-        if "wsgi.websocket" in environ or environ.get("REQUEST_METHOD", "") != "GET":
+        if "wsgi.websocket" in environ or environ.get("REQUEST_METHOD",
+                                                      "") != "GET":
             r = Response(environ, start_response, self.app)
             return r.process_response()
 
-        if (
-            environ.get("HTTP_UPGRADE", "").lower() != "websocket"
-            or "upgrade" not in environ.get("HTTP_CONNECTION", "").lower()
-        ):
+        if (environ.get("HTTP_UPGRADE", "").lower() != "websocket" or "upgrade"
+                not in environ.get("HTTP_CONNECTION", "").lower()):
             r = Response(environ, start_response, self.app)
             return r.process_response()
 
@@ -845,7 +841,8 @@ class WSocketApp:
             logger.warning("No protocol defined")
             start_response(
                 "426 Upgrade Required",
-                [("Sec-WebSocket-Version", ", ".join(self.SUPPORTED_VERSIONS))],
+                [("Sec-WebSocket-Version", ", ".join(self.SUPPORTED_VERSIONS))
+                 ],
             )
             return [b"No Websocket protocol version defined"]
 
@@ -855,7 +852,8 @@ class WSocketApp:
             logger.warning(msg)
             start_response(
                 "400 Bad Request",
-                [("Sec-WebSocket-Version", ", ".join(self.SUPPORTED_VERSIONS))],
+                [("Sec-WebSocket-Version", ", ".join(self.SUPPORTED_VERSIONS))
+                 ],
             )
             return [msg.encode()]
 
@@ -890,7 +888,8 @@ class WSocketApp:
         extensions = environ.get("HTTP_SEC_WEBSOCKET_EXTENSIONS")
         if extensions:
             extensions = {
-                extension.split(";")[0].strip() for extension in extensions.split(",")
+                extension.split(";")[0].strip()
+                for extension in extensions.split(",")
             }
             do_compress = "permessage-deflate" in extensions
 
@@ -899,8 +898,8 @@ class WSocketApp:
 
         if PY3:
             accept = b64encode(
-                sha1((key + self.GUID).encode("latin-1")).digest()
-            ).decode("latin-1")
+                sha1((key +
+                      self.GUID).encode("latin-1")).digest()).decode("latin-1")
 
         else:
             accept = b64encode(sha1(key + self.GUID).digest())
@@ -921,8 +920,12 @@ class WSocketApp:
         write = start_response("101 Switching Protocols", headers)
         read = environ["wsgi.input"].read
         write(b"")
-        websocket = self.websocket_class(environ, read, write, self, do_compress)
-        environ.update({"wsgi.websocket_version": version, "wsgi.websocket": websocket})
+        websocket = self.websocket_class(environ, read, write, self,
+                                         do_compress)
+        environ.update({
+            "wsgi.websocket_version": version,
+            "wsgi.websocket": websocket
+        })
         r = Response(environ, start_response, self.app)
         r.start_response = self.fake
         return r.process_response(False)
