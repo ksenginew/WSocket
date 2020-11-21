@@ -48,7 +48,7 @@ except ImportError as e:
 
 
 __author__ = "Kavindu Santhusa"
-__version__ = "2.0.1"
+__version__ = "2.1.1"
 __license__ = "MIT"
 __status__ = 4  # see setup.py
 
