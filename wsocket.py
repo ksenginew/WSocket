@@ -18,6 +18,7 @@ from __future__ import absolute_import, division, print_function
 from base64 import b64decode, b64encode
 from hashlib import sha1
 from sys import version_info, exc_info
+from os import urandom
 from threading import Thread
 from time import sleep
 import traceback
@@ -26,8 +27,7 @@ import zlib
 import struct
 import socket
 from socket import error as socket_error
-from wsgiref.simple_server import make_server, ServerHandler
-from wsgiref.simple_server import WSGIRequestHandler, WSGIServer
+from wsgiref.simple_server import make_server, ServerHandler, WSGIRequestHandler, WSGIServer
 
 try:  # Py3
     from socketserver import ThreadingMixIn
@@ -36,6 +36,16 @@ try:  # Py3
 except ImportError:  # Py2
     from SocketServer import ThreadingMixIn
     from urllib import urlencode
+
+try:
+    import ssl
+except ImportError as e:
+    ssl_err = e
+
+    class ssl():
+        def __getattr__(self, name):
+            raise ssl_err
+
 
 __author__ = "Kavindu Santhusa"
 __version__ = "2.0.1"
@@ -49,14 +59,14 @@ logging.basicConfig()
 PY3 = version_info[0] >= 3
 if PY3:
     import http.client as httplib
-
+    from urllib.parse import urlparse
     text_type = str
     string_types = (str, )
     range_type = range
 
 else:
     import httplib
-
+    from urlparse import urlparse
     bytes = str
     text_type = unicode
     string_types = basestring
@@ -97,6 +107,7 @@ _HTTP_STATUS_LINES = dict(
 
 
 def log_traceback(ex):
+    """generates error log from Exception object."""
     if PY3:
         ex_traceback = ex.__traceback__
     else:
@@ -193,11 +204,8 @@ class FixedHandler(WSGIRequestHandler):  # fixed request handler
         return self.client_address[0]
 
     def log_request(self, *args, **kw):
-        try:
-            if not getattr(self, "quit", False):
-                return WSGIRequestHandler.log_request(self, *args, **kw)
-        except:
-            pass
+        if not self.quiet:
+            return WSGIRequestHandler.log_request(self, *args, **kw)
 
     def get_app(self):
         return self.server.get_app()
@@ -241,10 +249,15 @@ class WebSocket(object):
         self.read = read
         self.handler = handler
         self.do_compress = do_compress
-        self.origin = self.environ.get("HTTP_ORIGIN")
-        self.protocol = self.environ.get("HTTP_SEC_WEBSOCKET_PROTOCOL")
-        self.version = self.environ.get("HTTP_SEC_WEBSOCKET_VERSION")
-        self.path = self.environ.get("PATH_INFO")
+        self.origin = self.environ.get(
+            "HTTP_SEC_WEBSOCKET_ORIGIN") or self.environ.get("HTTP_ORIGIN")
+        self.protocols = list(
+            map(str.strip,
+                self.environ.get("HTTP_SEC_WEBSOCKET_PROTOCOL",
+                                 "").split(",")))
+        self.version = int(
+            self.environ.get("HTTP_SEC_WEBSOCKET_VERSION", "0").strip())
+        self.path = self.environ.get("PATH_INFO", "/")
         if do_compress:
             self.compressor = zlib.compressobj(7, zlib.DEFLATED,
                                                -zlib.MAX_WBITS)
@@ -265,6 +278,7 @@ class WebSocket(object):
             return bytestring.decode("utf-8")
 
         except UnicodeDecodeError as e:
+            print('UnicodeDecodeError')
             self.close(1007, str(e))
             raise
 
@@ -376,7 +390,7 @@ class WebSocket(object):
                 compressed = False
 
             if flags:
-                raise ProtocolError
+                raise ProtocolError(str(flags))
 
             if not length:
                 payload = b""
@@ -395,7 +409,7 @@ class WebSocket(object):
                     raise WebSocketError(
                         "Unexpected EOF reading frame payload")
 
-                if mask:
+                if has_mask:
                     payload = self.mask_payload(mask, length, payload)
 
                 if compressed:
@@ -427,6 +441,7 @@ class WebSocket(object):
                 continue
 
             elif f_opcode == OPCODE_CLOSE:
+                print('opcode close')
                 self.handle_close(payload)
                 return
 
@@ -453,6 +468,7 @@ class WebSocket(object):
         the socket is considered closed/errored.
         """
         if self.closed:
+            print('receive closed')
             self.handler.on_close(MSG_ALREADY_CLOSED)
             raise WebSocketError(MSG_ALREADY_CLOSED)
 
@@ -460,16 +476,20 @@ class WebSocket(object):
             return self.read_message()
 
         except UnicodeError as e:
+            print('UnicodeDecodeError')
             self.close(1007, str(e).encode())
 
         except ProtocolError as e:
+            print('Protocol err', e)
             self.close(1002, str(e).encode())
 
         except socket.timeout as e:
+            print('timeout')
             self.close(message=str(e))
             self.handler.on_close(MSG_CLOSED)
 
         except socket.error as e:
+            print('spcket err')
             self.close(message=str(e))
             self.handler.on_close(MSG_CLOSED)
 
@@ -521,6 +541,7 @@ class WebSocket(object):
 
     def send_frame(self, message, opcode, do_compress=False):
         if self.closed:
+            print('receive closed')
             self.handler.on_close(MSG_ALREADY_CLOSED)
             raise WebSocketError(MSG_ALREADY_CLOSED)
 
@@ -550,8 +571,8 @@ class WebSocket(object):
         try:
             self.write(bytes(header + message))
 
-        except socket.error:
-            raise WebSocketError(MSG_SOCKET_DEAD)
+        except socket.error as e:
+            raise WebSocketError(MSG_SOCKET_DEAD + " : " + str(e))
 
     def send(self, message, binary=None, do_compress=True):
         """
@@ -576,7 +597,9 @@ class WebSocket(object):
         message.  The underlying socket object is _not_ closed, that is the
         responsibility of the initiator.
         """
+        print("close called")
         if self.closed:
+            print('receive closed')
             self.handler.on_close(MSG_ALREADY_CLOSED)
 
         try:
@@ -755,8 +778,10 @@ class WSocketApp:
     send = None
     routes = {}
 
-    def __init__(self, app=None, protocol=None):
-        self.protocol = protocol
+    def __init__(self, app=None, protocols=[]):
+        self.protocols = protocols if isinstance(protocols,
+                                                 (list, tuple,
+                                                  set)) else [protocols]
         self.app = app or self.wsgi
         self.onclose = Event(self.on_close)
         self.onmessage = Event(self.on_message)
@@ -831,14 +856,22 @@ class WSocketApp:
                                                       "") != "GET":
             r = Response(environ, start_response, self.app)
             return r.process_response()
-
-        if (environ.get("HTTP_UPGRADE", "").lower() != "websocket" or "upgrade"
-                not in environ.get("HTTP_CONNECTION", "").lower()):
+        # Upgrade
+        # Connection
+        if "websocket" not in map(
+                str.strip,
+                environ.get("HTTP_UPGRADE",
+                            "").lower().split(",")) or "upgrade" not in map(
+                                str.strip,
+                                environ.get("HTTP_CONNECTION",
+                                            "").lower().split(",")):
             r = Response(environ, start_response, self.app)
             return r.process_response()
-
+        # Sec-WebSocket-Version PLUS determine mode: Hybi or Hixie
         if "HTTP_SEC_WEBSOCKET_VERSION" not in environ:
-            logger.warning("No protocol defined")
+            logger.warning(
+                "WebSocket connection denied - Hixie76 protocol not supported."
+            )
             start_response(
                 "426 Upgrade Required",
                 [("Sec-WebSocket-Version", ", ".join(self.SUPPORTED_VERSIONS))
@@ -847,6 +880,8 @@ class WSocketApp:
             return [b"No Websocket protocol version defined"]
 
         version = environ.get("HTTP_SEC_WEBSOCKET_VERSION")
+
+        # respond with list of supported versions (descending order)
         if version not in self.SUPPORTED_VERSIONS:
             msg = "Unsupported WebSocket Version: %s" % version
             logger.warning(msg)
@@ -858,7 +893,7 @@ class WSocketApp:
             return [msg.encode()]
 
         key = environ.get("HTTP_SEC_WEBSOCKET_KEY", "").strip()
-        if not key:
+        if not len(key):
             msg = "Sec-WebSocket-Key header is missing/empty"
             logger.warning(msg)
             start_response("400 Bad Request", [])
@@ -879,22 +914,19 @@ class WSocketApp:
             start_response("400 Bad Request", [])
             return [msg.encode]
 
-        requested_protocols = environ.get("HTTP_SEC_WEBSOCKET_PROTOCOL", "")
-        protocol = None
-        if self.protocol and self.protocol in requested_protocols:
-            protocol = self.protocol
-            logger.debug("Protocol allowed: {0}".format(protocol))
+        # Sec-WebSocket-Protocol
+        requested_protocols = list(
+            map(str.strip,
+                environ.get("HTTP_SEC_WEBSOCKET_PROTOCOL", "").split(",")))
+        protocols = None
+        protocols = set(requested_protocols) and set(self.protocols)
+        logger.debug("Protocols allowed: {0}".format(", ".join(protocols)))
 
-        extensions = environ.get("HTTP_SEC_WEBSOCKET_EXTENSIONS")
-        if extensions:
-            extensions = {
-                extension.split(";")[0].strip()
-                for extension in extensions.split(",")
-            }
-            do_compress = "permessage-deflate" in extensions
+        extensions = list(
+            map(lambda ext: ext.split(";")[0].strip(),
+                environ.get("HTTP_SEC_WEBSOCKET_EXTENSIONS", "").split(",")))
 
-        else:
-            do_compress = False
+        do_compress = "permessage-deflate" in extensions
 
         if PY3:
             accept = b64encode(
@@ -913,8 +945,8 @@ class WSocketApp:
         if do_compress:
             headers.append(("Sec-WebSocket-Extensions", "permessage-deflate"))
 
-        if protocol:
-            headers.append(("Sec-WebSocket-Protocol", protocol))
+        if protocols:
+            headers.append(("Sec-WebSocket-Protocol", ", ".join(protocols)))
 
         logger.debug("WebSocket request accepted, switching protocols")
         write = start_response("101 Switching Protocols", headers)
@@ -937,6 +969,14 @@ class WebSocketHandler(FixedHandler):
         return WSocketApp(self.server.get_app())
 
 
+WSocketHandler = WebSocketHandler
+
+
+class WSocketServer(ThreadingWSGIServer):
+    def set_app(self, app, *args, **kwargs):
+        ThreadingWSGIServer.set_app(self, WSocketApp(app), *args, **kwargs)
+
+
 def run(app=WSocketApp(), host="127.0.0.1", port=8080, **options):
     handler_cls = options.get("handler_class", FixedHandler)
     server_cls = options.get("server_class", ThreadingWSGIServer)
@@ -949,7 +989,7 @@ def run(app=WSocketApp(), host="127.0.0.1", port=8080, **options):
 
     srv = make_server(host, port, app, server_cls, handler_cls)
     port = srv.server_port  # update port actual port (0 means random)
-    print("Server started at http://%s/%i." % (host, port))
+    print("Server started at http://%s:%i." % (host, port))
     try:
         srv.serve_forever()
 
