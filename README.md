@@ -1,4 +1,10 @@
-[![Downloads](https://pepy.tech/badge/wsocket)](https://pepy.tech/project/wsocket)
+[![Downloads](https://static.pepy.tech/personalized-badge/wsocket?period=total&units=none&left_color=black&right_color=blue&left_text=downloads)](https://pepy.tech/project/wsocket) 
+ [![GitHub issues](https://img.shields.io/github/issues/Ksengine/WSocket?style=flat-square)](https://github.com/Ksengine/WSocket/issues) 
+ [![GitHub forks](https://img.shields.io/github/forks/Ksengine/WSocket?style=flat-square)](https://github.com/Ksengine/WSocket/network) 
+ [![GitHub stars](https://img.shields.io/github/stars/Ksengine/WSocket?style=flat-square)](https://github.com/Ksengine/WSocket/stargazers) 
+ [![GitHub license](https://img.shields.io/github/license/Ksengine/WSocket?style=flat-square)](https://github.com/Ksengine/WSocket/blob/master/LICENSE) 
+ [![Twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2FKsengine%2FWSocket)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2FKsengine%2FWSocket) 
+
 <br />
 <p align="center">
   <a href="https://github.com/Ksengine/WSocket">
