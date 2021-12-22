@@ -31,96 +31,17 @@
 
 ## About The Project
 
-There are many great WebSocket libraries available on GitHub:octocat:, 
-however, I didn't find one that really suit my needs so I created this enhanced one. 
+This is a simple library to add websocket support to WSGI.
 
-Here's why:
-- **Use with any server** - WSocket supports any WSGI server(with patches). and patched `wsgiref` server already included. 
-- **Use with any web framework** - WSocket supports any WSGI framework. and basic web framework already included. 
-- **Plug :electric_plug: and Play :arrow_forward:** - use WSocket app
-
-**Note:** I am a 16 years old student.I have no enough knowledge. So can anyone [help me](https://github.com/Ksengine/WSocket/issues/2) to develop this library?
-
-### Server
-Server([WSGI](http://www.wsgi.org/)) creates and listens at the HTTPsocket, dispatching the requests to a handler. WSGIRef server but uses threads to handle requests by using the ThreadingMixIn. This is useful to handle web browsers pre-opening sockets, on which Server would wait indefinitely.
-**can used with any WSGI compatible web framework**
-
-### Middleware
-convert any WSGI compatible web framework to Websocket+HTTP framework
-using middleware.
-**works with many WSGI compatible servers**
-**can used with any WSGI compatible web framework**
-> Flask, Django, Pyramid, Bottle, ... supported
-
-### Handler
-`wsgiref.simple_server.WSGIRequestHandler`  like class named `FixedHandler`  that always wrap WSGI app using Middleware.
-changes from `WSGIRequestHandler` :
-- Prevents reverse DNS lookups
-- errorless logger
-- use `ServerHandler`  to make it WSGI
-
-> You can convert wsgiref to a websocket+HTTP server using this handler
-
-#### ServerHandler
-`wsgiref.simple_server.ServerHandler`(inherited from `wsgiref.handlers.ServerHandler` like handler named `FixedServerHandler` .
-changes from `ServerHandler` :
-- set HTTP version to `1.1` because versions below `1.1` are not supported some clients like Firefox.
-- removed hop-by-hop headers checker because it raise errors on `Upgrade`  and `Connection` headers
-- check that all headers are strings
-
-### Framework
-basic WSGI web application framework that uses Middleware.
-- simple routes handler
-- auto description to status code
-- headers checker
-- send data as soon as possible
-- send strings, bytes, lists(even bytes and strings mixed) or files directly 
-- error catcher and error logger
-
-**works with many WSGI compatible servers**
-
-### App
-Event based app for websocket communication. this is app that uses Framework
-if not events handled by developer. this app works like demo(echo) app.
-
-
-## Features
-
-all Middleware, Handler, Framework and App has following features.
-
-- websocket sub protocol supported
-- websocket message compression supported (works if client asks)
-- receive and send pong and ping messages(with automatic pong sender)
-- receive and send binary or text messages
-- works for messages with or without mask
-- closing messages supported
-- auto and manual close
-
+- Server - Patched wsgiref server
+- Middleware - Add websocket support to Flask, Django, Pyramid, Bottle, ...
+- Handler - Websocket handler to wsgiref
+- Framework - Basic websocket + WSGI web application framework
+- App - Plug and play demo app.
 
 ## Getting Started
 
 This is an example of how you may give instructions on setting up your websocket connunication locally. 
-
-### Prerequisites
-
-run following command on your command prompt/ console.
-```bash
-python -c "import wsgiref"
-```
-
-If no result printed, jump to [Installation section](#Installation)
-
-if you can see following error
-```python
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-ModuleNotFoundError: No module named 'wsgiref'
-```
-
-run following command on your command prompt/ console.
-```bash
-pip install wsgiref
-```
 
 ### Installation
 You can
@@ -144,8 +65,6 @@ pip install --upgrade wsocket
     ├─ hello_world.py
     ├─ wsocket.py
 ```
-**Report Bugs** - https://github.com/Ksengine/WSocket/issues/new/
-
 
 ## Usage
 
@@ -183,15 +102,6 @@ run(app)
 - Save file (`ctrl+s` in browser).
 - Open it in browser(websocket supported).
 - Experience the two way websocket communication. :smile::smile::smile:
-
-**View Documentaion** - https://wsocket.gitbook.io/
-
-**Report Bugs** - https://github.com/Ksengine/WSocket/issues/new/
-
-
-## Roadmap
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a list of proposed features (and known issues).
 
 
 ## Contributing
