@@ -657,6 +657,7 @@ class Response(object):
                     'title': type(e).__name__,
                     'body': '```python\n' + log + '\n```'
                 }))
+            logger.debug(log)
             return [err.encode("utf-8")]
 
         if not allow_write:
