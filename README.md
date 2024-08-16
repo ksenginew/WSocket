@@ -120,6 +120,4 @@ Code and documentation are available according to the MIT License (see  [LICENSE
 
 
 ## Contact
-**View Documentaion** - https://wsocket.gitbook.io/
-
 **Report Bugs** - https://github.com/Ksengine/WSocket/issues/new/
